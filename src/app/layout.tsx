@@ -96,12 +96,15 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
         
-        {/* Google AdSense */}
+        {/* Google AdSense Auto Ads */}
         <script 
           async 
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1159282031048772"
           crossOrigin="anonymous"
         />
+        <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
         
         {/* Google Ads Global Site Tag */}
         <script
