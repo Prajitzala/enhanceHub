@@ -8,19 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
-import { Download, Wand2, ArrowRight, CheckCircle, Zap, Shield, RefreshCw, Palette, Scissors, X } from 'lucide-react'
+import { Download, Wand2, ArrowRight, CheckCircle, Zap, Shield, RefreshCw, Palette, Scissors } from 'lucide-react'
 import { trackPhotoRestoration, trackEngagement } from '@/lib/google-ads'
 import FaviconIcon from '@/components/ui/favicon'
-import dynamic from 'next/dynamic'
-
-const AdBanner = dynamic(() => import('@/components/ui/ad-banner'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-12 bg-gray-100 rounded flex items-center justify-center">
-      <div className="text-gray-500 text-sm">Loading ad...</div>
-    </div>
-  )
-})
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
@@ -29,7 +19,6 @@ export default function Home() {
   const [isDownloading, setIsDownloading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [restoredImage, setRestoredImage] = useState<string | null>(null)
-  const [showStickyAd, setShowStickyAd] = useState(true)
   const { toast } = useToast()
   const uploadSectionRef = useRef<HTMLDivElement>(null)
 
@@ -256,27 +245,27 @@ export default function Home() {
         transition={{ duration: 0.8 }}
         className="border-b border-gray-100 relative z-20"
       >
-        <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <motion.div 
                 whileHover={{ rotate: 360 }}
                 transition={{ duration: 0.6 }}
-                className="w-10 h-10 bg-black rounded-lg flex items-center justify-center"
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-black rounded-lg flex items-center justify-center"
               >
-                <FaviconIcon className="h-6 w-6" />
+                <FaviconIcon className="h-4 w-4 sm:h-6 sm:w-6" />
               </motion.div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">
                   AI EnhanceHub
                 </h1>
               </div>
             </div>
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center">
               <Button 
                 onClick={scrollToUpload}
                 size="sm" 
-                className="bg-gray-100 hover:bg-gray-200 text-black"
+                className="bg-gray-100 hover:bg-gray-200 text-black text-sm px-3 py-2 sm:px-4 sm:py-2"
               >
                 Get Started
               </Button>
@@ -286,31 +275,31 @@ export default function Home() {
       </motion.header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-16 relative z-20">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 relative z-20">
         {/* Hero Section */}
         <motion.div 
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-center mb-16"
+          className="text-center mb-8 sm:mb-12 lg:mb-16"
         >
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight px-2">
             Professional AI Photo <span className="font-instrument-serif font-bold italic">Restoration</span> & Enhancement
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed mb-8">
+          <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed mb-6 sm:mb-8 px-4">
             Transform old, damaged photos with AI-powered restoration. Remove scratches, fix tears, colorize black & white photos, and enhance image quality instantly. Professional photo restoration made simple.
           </p>
-          <div className="flex items-center justify-center space-x-8 text-sm text-gray-500">
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 lg:space-x-8 text-xs sm:text-sm text-gray-500 px-4">
             <div className="flex items-center space-x-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
+              <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
               <span>No registration required</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Zap className="h-4 w-4 text-yellow-500" />
+              <Zap className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
               <span>Instant restoration</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Shield className="h-4 w-4 text-blue-500" />
+              <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
               <span>Privacy focused</span>
             </div>
           </div>
@@ -321,11 +310,11 @@ export default function Home() {
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="bg-gray-50 rounded-3xl p-12"
+          className="bg-gray-50 rounded-2xl sm:rounded-3xl p-4 sm:p-8 lg:p-12"
         >
           {/* Upload Area */}
-          <section ref={uploadSectionRef} className="mb-12" aria-labelledby="upload-heading">
-            <h2 id="upload-heading" className="text-2xl font-semibold text-gray-900 text-center mb-8">
+          <section ref={uploadSectionRef} className="mb-8 sm:mb-12" aria-labelledby="upload-heading">
+            <h2 id="upload-heading" className="text-xl sm:text-2xl font-semibold text-gray-900 text-center mb-6 sm:mb-8 px-2">
               Upload Your Old Photo for AI Restoration
             </h2>
             <FileUploader
@@ -337,12 +326,12 @@ export default function Home() {
           </section>
 
           {/* Process Button */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6 sm:mb-8">
             <Button
               onClick={handleRestore}
               disabled={!selectedFile || isProcessing}
               size="lg"
-              className="bg-black hover:bg-gray-800 text-white px-12 py-4 rounded-2xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-black hover:bg-gray-800 text-white px-6 sm:px-8 lg:px-12 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               {isProcessing ? (
                 <div className="flex items-center space-x-3">
@@ -366,10 +355,10 @@ export default function Home() {
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="max-w-md mx-auto space-y-3"
+              className="max-w-md mx-auto space-y-3 px-4"
             >
-              <Progress value={progress} className="h-3 rounded-full bg-gray-200" />
-              <p className="text-sm text-gray-600 text-center">
+              <Progress value={progress} className="h-2 sm:h-3 rounded-full bg-gray-200" />
+              <p className="text-xs sm:text-sm text-gray-600 text-center">
                 Restoring your photo... {progress}%
               </p>
             </motion.div>
@@ -384,30 +373,30 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -50 }}
               transition={{ duration: 0.6 }}
-              className="mt-16"
+              className="mt-8 sm:mt-12 lg:mt-16"
             >
-              <h3 className="text-3xl font-bold text-gray-900 text-center mb-12">
+              <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-8 sm:mb-12 px-2">
                 Your Restored Photo
               </h3>
-              <div className="grid lg:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
                 {/* Original Photo */}
                 <motion.div 
                   initial={{ opacity: 0, x: -50 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.6, delay: 0.2 }}
-                  className="bg-gray-50 rounded-3xl p-8"
+                  className="bg-gray-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8"
                 >
-                  <h4 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                    <Scissors className="h-5 w-5 mr-2" />
+                  <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6 flex items-center">
+                    <Scissors className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                     Original Photo
                   </h4>
-                  <div className="rounded-2xl overflow-hidden shadow-2xl">
+                  <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-2xl">
                     <Image
                       src={selectedFile ? URL.createObjectURL(selectedFile) : ''}
                       alt="Original photo"
                       width={800}
                       height={600}
-                      className="w-full h-auto rounded-xl"
+                      className="w-full h-auto rounded-lg sm:rounded-xl"
                     />
                   </div>
                 </motion.div>
@@ -417,20 +406,20 @@ export default function Home() {
                   initial={{ opacity: 0, x: 50 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.6, delay: 0.4 }}
-                  className="bg-gray-50 rounded-3xl p-8"
+                  className="bg-gray-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8"
                 >
-                  <h4 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                    <RefreshCw className="h-5 w-5 mr-2" />
+                  <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6 flex items-center">
+                    <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                     Restored Photo
                   </h4>
                   <div className="relative">
-                    <div className="rounded-2xl overflow-hidden shadow-2xl">
+                    <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-2xl">
                       <Image
                         src={restoredImage}
                         alt="Restored photo"
                         width={800}
                         height={600}
-                        className="w-full h-auto rounded-xl"
+                        className="w-full h-auto rounded-lg sm:rounded-xl"
                       />
                     </div>
                     <motion.div
@@ -441,17 +430,17 @@ export default function Home() {
                       <Button
                         onClick={handleDownload}
                         disabled={isDownloading}
-                        className="absolute top-6 right-6 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-900 shadow-lg border border-gray-200 disabled:opacity-50"
+                        className="absolute top-3 right-3 sm:top-6 sm:right-6 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-900 shadow-lg border border-gray-200 disabled:opacity-50 text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2"
                       >
                         {isDownloading ? (
                           <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2"></div>
-                            Downloading...
+                            <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-gray-900 mr-1 sm:mr-2"></div>
+                            <span className="hidden sm:inline">Downloading...</span>
                           </>
                         ) : (
                           <>
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
+                            <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                            <span className="hidden sm:inline">Download</span>
                           </>
                         )}
                       </Button>
@@ -466,49 +455,49 @@ export default function Home() {
         {/* Features Section */}
         <section 
           aria-labelledby="features-heading"
-          className="mt-16"
+          className="mt-8 sm:mt-12 lg:mt-16"
         >
           <motion.div 
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
-            <h2 id="features-heading" className="text-3xl font-bold text-gray-900 text-center mb-12">
+            <h2 id="features-heading" className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-8 sm:mb-12 px-2">
               Advanced AI Photo Enhancement Features
             </h2>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             <motion.div 
               whileHover={{ y: -10 }}
               transition={{ duration: 0.3 }}
-              className="text-center space-y-4"
+              className="text-center space-y-3 sm:space-y-4"
             >
-              <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto">
-                <Scissors className="h-8 w-8 text-white" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto">
+                <Scissors className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </div>
-              <h4 className="text-xl font-semibold text-gray-900">Remove Scratches</h4>
-              <p className="text-gray-600">AI-powered scratch removal that preserves the original photo details while eliminating surface damage.</p>
+              <h4 className="text-lg sm:text-xl font-semibold text-gray-900">Remove Scratches</h4>
+              <p className="text-sm sm:text-base text-gray-600">AI-powered scratch removal that preserves the original photo details while eliminating surface damage.</p>
             </motion.div>
             <motion.div 
               whileHover={{ y: -10 }}
               transition={{ duration: 0.3 }}
-              className="text-center space-y-4"
+              className="text-center space-y-3 sm:space-y-4"
             >
-              <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto">
-                <RefreshCw className="h-8 w-8 text-white" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto">
+                <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </div>
-              <h4 className="text-xl font-semibold text-gray-900">Fix Damage</h4>
-              <p className="text-gray-600">Repair tears, holes, and other physical damage to restore the photo's original appearance.</p>
+              <h4 className="text-lg sm:text-xl font-semibold text-gray-900">Fix Damage</h4>
+              <p className="text-sm sm:text-base text-gray-600">Repair tears, holes, and other physical damage to restore the photo's original appearance.</p>
             </motion.div>
             <motion.div 
               whileHover={{ y: -10 }}
               transition={{ duration: 0.3 }}
-              className="text-center space-y-4"
+              className="text-center space-y-3 sm:space-y-4"
             >
-              <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto">
-                <Palette className="h-8 w-8 text-white" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto">
+                <Palette className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </div>
-              <h4 className="text-xl font-semibold text-gray-900">Colorize Photos</h4>
-              <p className="text-gray-600">Bring black and white photos to life with realistic colorization using advanced AI technology.</p>
+              <h4 className="text-lg sm:text-xl font-semibold text-gray-900">Colorize Photos</h4>
+              <p className="text-sm sm:text-base text-gray-600">Bring black and white photos to life with realistic colorization using advanced AI technology.</p>
             </motion.div>
           </div>
         </motion.div>
@@ -521,10 +510,10 @@ export default function Home() {
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.8 }}
-          className="mt-16 text-center bg-black rounded-3xl p-12 text-white"
+          className="mt-8 sm:mt-12 lg:mt-16 text-center bg-black rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-12 text-white"
         >
-          <h3 className="text-3xl font-bold mb-4">Ready to Restore Your Memories?</h3>
-          <p className="text-xl mb-8 opacity-90">Join thousands of users bringing their old photos back to life</p>
+          <h3 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 px-2">Ready to Restore Your Memories?</h3>
+          <p className="text-base sm:text-lg lg:text-xl mb-6 sm:mb-8 opacity-90 px-4">Join thousands of users bringing their old photos back to life</p>
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -533,7 +522,7 @@ export default function Home() {
               onClick={scrollToUpload}
               size="lg" 
               variant="secondary" 
-              className="bg-white text-black hover:bg-gray-100 px-8 py-3 rounded-xl font-semibold"
+              className="bg-white text-black hover:bg-gray-100 px-6 sm:px-8 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base w-full sm:w-auto"
             >
               Start Restoring Now
             </Button>
@@ -541,51 +530,26 @@ export default function Home() {
         </motion.div>
       </main>
 
-      {/* Sticky Bottom Ad Bar */}
-      {showStickyAd && (
-        <motion.div 
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          exit={{ y: 100 }}
-          className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50"
-        >
-          <div className="max-w-6xl mx-auto px-4 py-2 relative">
-            <button
-              onClick={() => setShowStickyAd(false)}
-              className="absolute top-2 right-2 p-1 hover:bg-gray-100 rounded-full transition-colors"
-              aria-label="Close ad"
-            >
-              <X className="h-4 w-4 text-gray-500" />
-            </button>
-            <AdBanner 
-              adSlot="5678901234"
-              adFormat="auto"
-              fullWidthResponsive={true}
-              className="w-full"
-              style={{ minHeight: '50px' }}
-            />
-          </div>
-        </motion.div>
-      )}
+
 
       {/* Footer */}
-      <footer className="mt-16 bg-gray-50 border-t border-gray-200 relative z-20 pb-20">
-        <div className="max-w-6xl mx-auto px-4 py-12">
+      <footer className="mt-8 sm:mt-12 lg:mt-16 bg-gray-50 border-t border-gray-200 relative z-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                <FaviconIcon className="h-5 w-5" />
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-black rounded-lg flex items-center justify-center">
+                <FaviconIcon className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <h4 className="text-lg font-bold text-gray-900">
+              <h4 className="text-base sm:text-lg font-bold text-gray-900">
                 AI EnhanceHub
               </h4>
             </div>
-            <p className="text-gray-600 text-sm max-w-md mx-auto">
+            <p className="text-gray-600 text-xs sm:text-sm max-w-md mx-auto px-4">
               Restore your precious memories with advanced AI photo restoration technology. Transform old, damaged photos into stunning restored images.
             </p>
           </div>
-          <div className="border-t border-gray-200 mt-8 pt-8 text-center text-gray-600">
-            <p>&copy; 2025 AI EnhanceHub.</p>
+          <div className="border-t border-gray-200 mt-6 sm:mt-8 pt-6 sm:pt-8 text-center text-gray-600">
+            <p className="text-xs sm:text-sm">&copy; 2025 AI EnhanceHub.</p>
           </div>
         </div>
       </footer>
