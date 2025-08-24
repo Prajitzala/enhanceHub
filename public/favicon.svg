@@ -1,0 +1,13 @@
+<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background square with rounded corners -->
+  <rect x="2" y="2" width="20" height="20" rx="4" fill="black"/>
+  
+  <!-- Main star/sparkle -->
+  <path d="M12 6L13.5 9.5L17 11L13.5 12.5L12 16L10.5 12.5L7 11L10.5 9.5L12 6Z" fill="white" stroke="white" stroke-width="0.5"/>
+  
+  <!-- Small circle -->
+  <circle cx="9" cy="14" r="1.5" fill="white"/>
+  
+  <!-- Plus sign -->
+  <path d="M15 8H16.5V9.5H18V11H16.5V12.5H15V11H13.5V9.5H15V8Z" fill="white"/>
+</svg>
