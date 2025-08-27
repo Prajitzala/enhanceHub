@@ -90,10 +90,19 @@ export async function POST(request: NextRequest) {
       throw new Error('Invalid output format from model')
     }
 
-    return NextResponse.json({
-      success: true,
-      imageUrl: imageUrl,
-      message: 'Photo restored successfully with AI'
+    // Fetch the image from the URL and return it as a blob
+    const imageResponse = await fetch(imageUrl)
+    if (!imageResponse.ok) {
+      throw new Error('Failed to fetch restored image')
+    }
+
+    const imageBlob = await imageResponse.blob()
+    
+    return new NextResponse(imageBlob, {
+      headers: {
+        'Content-Type': imageBlob.type || 'image/png',
+        'Content-Length': imageBlob.size.toString(),
+      },
     })
 
   } catch (error) {

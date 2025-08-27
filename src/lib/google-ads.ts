@@ -17,35 +17,50 @@ export const GOOGLE_ADS_CONVERSION_LABELS = {
   SIGNUP: 'SIGNUP_CONVERSION_LABEL',
 };
 
+// Safe window check
+const isClient = typeof window !== 'undefined';
+
 // Track page view
 export const trackPageView = (page: string) => {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('config', GOOGLE_ADS_CONVERSION_ID, {
-      page_title: page,
-      page_location: window.location.href,
-    });
+  if (isClient && window.gtag) {
+    try {
+      window.gtag('config', GOOGLE_ADS_CONVERSION_ID, {
+        page_title: page,
+        page_location: window.location.href,
+      });
+    } catch (error) {
+      console.warn('Failed to track page view:', error);
+    }
   }
 };
 
 // Track conversion
 export const trackConversion = (conversionLabel: string, value?: number) => {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', 'conversion', {
-      'send_to': `${GOOGLE_ADS_CONVERSION_ID}/${conversionLabel}`,
-      'value': value || 1.0,
-      'currency': 'USD',
-    });
+  if (isClient && window.gtag) {
+    try {
+      window.gtag('event', 'conversion', {
+        'send_to': `${GOOGLE_ADS_CONVERSION_ID}/${conversionLabel}`,
+        'value': value || 1.0,
+        'currency': 'USD',
+      });
+    } catch (error) {
+      console.warn('Failed to track conversion:', error);
+    }
   }
 };
 
 // Track custom event
 export const trackEvent = (action: string, category: string, label?: string, value?: number) => {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', action, {
-      'event_category': category,
-      'event_label': label,
-      'value': value,
-    });
+  if (isClient && window.gtag) {
+    try {
+      window.gtag('event', action, {
+        'event_category': category,
+        'event_label': label,
+        'value': value,
+      });
+    } catch (error) {
+      console.warn('Failed to track event:', error);
+    }
   }
 };
 
@@ -67,29 +82,37 @@ export const trackEngagement = {
 
 // Enhanced conversion tracking
 export const trackEnhancedConversion = (email?: string, phone?: string) => {
-  if (typeof window !== 'undefined' && window.gtag) {
-    const enhancedData: any = {};
-    
-    if (email) {
-      enhancedData.email = email;
+  if (isClient && window.gtag) {
+    try {
+      const enhancedData: any = {};
+      
+      if (email) {
+        enhancedData.email = email;
+      }
+      
+      if (phone) {
+        enhancedData.phone_number = phone;
+      }
+      
+      window.gtag('config', GOOGLE_ADS_CONVERSION_ID, {
+        'allow_enhanced_conversions': true,
+        ...enhancedData,
+      });
+    } catch (error) {
+      console.warn('Failed to track enhanced conversion:', error);
     }
-    
-    if (phone) {
-      enhancedData.phone_number = phone;
-    }
-    
-    window.gtag('config', GOOGLE_ADS_CONVERSION_ID, {
-      'allow_enhanced_conversions': true,
-      ...enhancedData,
-    });
   }
 };
 
 // Remarketing list tracking
 export const trackRemarketing = (listId: string) => {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', 'remarketing', {
-      'google_ads_remarketing_id': listId,
-    });
+  if (isClient && window.gtag) {
+    try {
+      window.gtag('event', 'remarketing', {
+        'google_ads_remarketing_id': listId,
+      });
+    } catch (error) {
+      console.warn('Failed to track remarketing:', error);
+    }
   }
 };

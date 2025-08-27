@@ -170,8 +170,10 @@ function toast({ ...props }: Toast) {
 
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
+  const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
+    setMounted(true)
     listeners.push(setState)
     return () => {
       const index = listeners.indexOf(setState)
@@ -179,7 +181,16 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, [])
+
+  // Return empty state during SSR to prevent hydration mismatch
+  if (!mounted) {
+    return {
+      toasts: [],
+      toast,
+      dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+    }
+  }
 
   return {
     ...state,

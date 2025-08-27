@@ -87,7 +87,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning={true}>
       <head>
         {/* Favicon */}
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -95,43 +95,6 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
-        
-        {/* Google AdSense Auto Ads */}
-        <script 
-          async 
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1159282031048772"
-          crossOrigin="anonymous"
-        />
-        <script>
-          (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
-        
-        {/* Google Ads Global Site Tag */}
-        <script
-          async
-          src="https://www.googletagmanager.com/gtag/js?id=AW-CONVERSION_ID"
-        />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'AW-CONVERSION_ID');
-            `,
-          }}
-        />
-        
-        {/* Google Ads Remarketing Tag */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              gtag('config', 'AW-CONVERSION_ID', {
-                'allow_enhanced_conversions': true
-              });
-            `,
-          }}
-        />
         
         {/* Structured Data for SEO */}
         <script

@@ -8,13 +8,14 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
-import { Download, Wand2, ArrowRight, CheckCircle, Zap, Shield, RefreshCw, Palette, Scissors } from 'lucide-react'
+import { Download, Wand2, ArrowRight, CheckCircle, Zap, Shield, RefreshCw, Palette, Scissors, Sparkles } from 'lucide-react'
 import { trackPhotoRestoration, trackEngagement } from '@/lib/google-ads'
 import FaviconIcon from '@/components/ui/favicon'
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [restoreFile, setRestoreFile] = useState<File | null>(null)
+  const [colorizeFile, setColorizeFile] = useState<File | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -34,12 +35,8 @@ export default function Home() {
   // Don't render anything until mounted to prevent hydration mismatch
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center relative overflow-hidden">
-        {/* Grid overlay background */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="grid-overlay"></div>
-        </div>
-        <div className="text-center relative z-10">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
           <div className="w-32 h-32 mx-auto mb-4 flex items-center justify-center">
             <div className="w-16 h-16 bg-black rounded-lg flex items-center justify-center">
               <FaviconIcon className="h-8 w-8" />
@@ -51,16 +48,24 @@ export default function Home() {
     )
   }
 
-  const handleFileSelect = (file: File) => {
-    setSelectedFile(file)
+  const handleRestoreFileSelect = (file: File) => {
+    setRestoreFile(file)
     setRestoredImage(null)
-    setColorizedImage(null)
     trackPhotoRestoration.upload()
   }
 
-  const handleRemoveFile = () => {
-    setSelectedFile(null)
+  const handleColorizeFileSelect = (file: File) => {
+    setColorizeFile(file)
+    setColorizedImage(null)
+  }
+
+  const handleRemoveRestoreFile = () => {
+    setRestoreFile(null)
     setRestoredImage(null)
+  }
+
+  const handleRemoveColorizeFile = () => {
+    setColorizeFile(null)
     setColorizedImage(null)
   }
 
@@ -83,7 +88,7 @@ export default function Home() {
   }
 
   const handleRestore = async () => {
-    if (!selectedFile) {
+    if (!restoreFile) {
       toast({
         title: "No image selected",
         description: "Please upload an old, damaged, or scratched photo to restore.",
@@ -99,7 +104,7 @@ export default function Home() {
 
     try {
       const formData = new FormData()
-      formData.append('image', selectedFile)
+      formData.append('image', restoreFile)
 
       setProgress(30)
 
@@ -111,137 +116,33 @@ export default function Home() {
       setProgress(70)
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `Restoration failed: ${response.status}`)
+        throw new Error('Failed to restore image')
       }
 
-      const result = await response.json()
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Restoration failed')
-      }
-
+      const blob = await response.blob()
+      const imageUrl = URL.createObjectURL(blob)
+      setRestoredImage(imageUrl)
       setProgress(100)
-      setRestoredImage(result.imageUrl)
 
       trackPhotoRestoration.complete()
-
       toast({
         title: "Success!",
-        description: "Your photo has been restored and enhanced with AI.",
+        description: "Your photo has been restored successfully.",
       })
-
     } catch (error) {
-      console.error('Error restoring image:', error)
-      
-      let errorMessage = "Failed to restore image. Please try again."
-      let errorType = "general_error"
-      
-      if (error instanceof Error) {
-        if (error.message.includes('REPLICATE_API_TOKEN_MISSING')) {
-          errorMessage = "Replicate API token is missing. Please create a .env.local file with your REPLICATE_API_TOKEN."
-          errorType = "api_token_missing"
-        } else if (error.message.includes('REPLICATE_API_TOKEN')) {
-          errorMessage = "AI processing is not configured. Please set up your API key."
-          errorType = "api_not_configured"
-        } else if (error.message.includes('HTTP 503')) {
-          errorMessage = "AI service is temporarily unavailable. Please try again later."
-          errorType = "service_unavailable"
-        } else if (error.message.includes('HTTP 400')) {
-          errorMessage = "Invalid file. Please check your image."
-          errorType = "invalid_file"
-        } else {
-          errorMessage = error.message
-          errorType = "unknown_error"
-        }
-      }
-
-      trackPhotoRestoration.error(errorType)
-
+      console.error('Restoration error:', error)
       toast({
         title: "Error",
-        description: errorMessage,
+        description: "Failed to restore the image. Please try again.",
         variant: "destructive",
       })
     } finally {
       setIsProcessing(false)
-      setProgress(0)
-    }
-  }
-
-  const handleDownload = async () => {
-    if (restoredImage) {
-      setIsDownloading(true)
-      trackPhotoRestoration.download()
-
-      try {
-        // Fetch the image from the URL
-        const response = await fetch(restoredImage)
-        const blob = await response.blob()
-        
-        // Create a blob URL
-        const blobUrl = window.URL.createObjectURL(blob)
-        
-        // Determine file extension based on content type
-        let fileExtension = 'png' // default
-        if (blob.type === 'image/jpeg' || blob.type === 'image/jpg') {
-          fileExtension = 'jpg'
-        } else if (blob.type === 'image/webp') {
-          fileExtension = 'webp'
-        }
-        
-        // Create filename with original file name if available
-        let filename = 'restored-photo'
-        if (selectedFile) {
-          const originalName = selectedFile.name
-          const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName
-          filename = `${nameWithoutExt}-restored`
-        }
-        
-        // Create download link
-        const link = document.createElement('a')
-        link.href = blobUrl
-        link.download = `${filename}.${fileExtension}`
-        link.style.display = 'none'
-        
-        // Trigger download
-        document.body.appendChild(link)
-        link.click()
-        
-        // Cleanup
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(blobUrl)
-        
-        // Show success message
-        toast({
-          title: "Download Started",
-          description: `Your restored photo is being downloaded as ${filename}.${fileExtension}`,
-        })
-        
-      } catch (error) {
-        console.error('Download failed:', error)
-        
-        // Fallback to direct link method
-        const link = document.createElement('a')
-        link.href = restoredImage
-        link.download = 'restored-photo.png'
-        link.target = '_blank'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        
-        toast({
-          title: "Download Started",
-          description: "Your restored photo download has started.",
-        })
-      } finally {
-        setIsDownloading(false)
-      }
     }
   }
 
   const handleColorize = async () => {
-    if (!selectedFile) {
+    if (!colorizeFile) {
       toast({
         title: "No image selected",
         description: "Please upload a black and white photo to colorize.",
@@ -250,15 +151,12 @@ export default function Home() {
       return
     }
 
-    trackPhotoRestoration.start()
-
     setIsColorizing(true)
     setColorizeProgress(0)
 
     try {
       const formData = new FormData()
-      formData.append('image', selectedFile)
-      formData.append('model_name', 'Artistic')
+      formData.append('image', colorizeFile)
 
       setColorizeProgress(30)
 
@@ -270,142 +168,76 @@ export default function Home() {
       setColorizeProgress(70)
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `Colorization failed: ${response.status}`)
+        throw new Error('Failed to colorize image')
       }
 
-      const result = await response.json()
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Colorization failed')
-      }
-
+      const blob = await response.blob()
+      const imageUrl = URL.createObjectURL(blob)
+      setColorizedImage(imageUrl)
       setColorizeProgress(100)
-      setColorizedImage(result.imageUrl)
-
-      trackPhotoRestoration.complete()
 
       toast({
         title: "Success!",
-        description: "Your photo has been colorized with AI.",
+        description: "Your photo has been colorized successfully.",
       })
-
     } catch (error) {
-      console.error('Error colorizing image:', error)
-      
-      let errorMessage = "Failed to colorize image. Please try again."
-      let errorType = "general_error"
-      
-      if (error instanceof Error) {
-        if (error.message.includes('REPLICATE_API_TOKEN_MISSING')) {
-          errorMessage = "Replicate API token is missing. Please create a .env.local file with your REPLICATE_API_TOKEN."
-          errorType = "api_token_missing"
-        } else if (error.message.includes('REPLICATE_API_TOKEN')) {
-          errorMessage = "AI processing is not configured. Please set up your API key."
-          errorType = "api_not_configured"
-        } else if (error.message.includes('HTTP 503')) {
-          errorMessage = "AI service is temporarily unavailable. Please try again later."
-          errorType = "service_unavailable"
-        } else if (error.message.includes('HTTP 400')) {
-          errorMessage = "Invalid file. Please check your image."
-          errorType = "invalid_file"
-        } else {
-          errorMessage = error.message
-          errorType = "unknown_error"
-        }
-      }
-
-      trackPhotoRestoration.error(errorType)
-
+      console.error('Colorization error:', error)
       toast({
         title: "Error",
-        description: errorMessage,
+        description: "Failed to colorize the image. Please try again.",
         variant: "destructive",
       })
     } finally {
       setIsColorizing(false)
-      setColorizeProgress(0)
+    }
+  }
+
+  const handleDownload = async () => {
+    if (!restoredImage) return
+
+    setIsDownloading(true)
+    try {
+      const response = await fetch(restoredImage)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'restored-photo.png'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Download error:', error)
+    } finally {
+      setIsDownloading(false)
     }
   }
 
   const handleDownloadColorized = async () => {
-    if (colorizedImage) {
-      setIsDownloading(true)
-      trackPhotoRestoration.download()
+    if (!colorizedImage) return
 
+      setIsDownloading(true)
       try {
-        // Fetch the image from the URL
         const response = await fetch(colorizedImage)
         const blob = await response.blob()
-        
-        // Create a blob URL
-        const blobUrl = window.URL.createObjectURL(blob)
-        
-        // Determine file extension based on content type
-        let fileExtension = 'png' // default
-        if (blob.type === 'image/jpeg' || blob.type === 'image/jpg') {
-          fileExtension = 'jpg'
-        } else if (blob.type === 'image/webp') {
-          fileExtension = 'webp'
-        }
-        
-        // Create filename with original file name if available
-        let filename = 'colorized-photo'
-        if (selectedFile) {
-          const originalName = selectedFile.name
-          const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName
-          filename = `${nameWithoutExt}-colorized`
-        }
-        
-        // Create download link
-        const link = document.createElement('a')
-        link.href = blobUrl
-        link.download = `${filename}.${fileExtension}`
-        link.style.display = 'none'
-        
-        // Trigger download
-        document.body.appendChild(link)
-        link.click()
-        
-        // Cleanup
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(blobUrl)
-        
-        // Show success message
-        toast({
-          title: "Download Started",
-          description: `Your colorized photo is being downloaded as ${filename}.${fileExtension}`,
-        })
-        
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'colorized-photo.png'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
       } catch (error) {
-        console.error('Download failed:', error)
-        
-        // Fallback to direct link method
-        const link = document.createElement('a')
-        link.href = colorizedImage
-        link.download = 'colorized-photo.png'
-        link.target = '_blank'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        
-        toast({
-          title: "Download Started",
-          description: "Your colorized photo download has started.",
-        })
+      console.error('Download error:', error)
       } finally {
         setIsDownloading(false)
-      }
     }
   }
 
   return (
-    <div className="min-h-screen bg-white relative overflow-hidden">
-      {/* Grid overlay background */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="grid-overlay"></div>
-      </div>
-      
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <Toaster />
       
       {/* Header */}
@@ -413,29 +245,29 @@ export default function Home() {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.8 }}
-        className="border-b border-gray-100 relative z-20"
+        className="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50"
       >
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div className="w-full px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center space-x-3">
               <motion.div 
                 whileHover={{ rotate: 360 }}
                 transition={{ duration: 0.6 }}
-                className="w-8 h-8 sm:w-10 sm:h-10 bg-black rounded-lg flex items-center justify-center"
+                className="w-10 h-10 bg-black rounded-lg flex items-center justify-center"
               >
-                <FaviconIcon className="h-4 w-4 sm:h-6 sm:w-6" />
+                <FaviconIcon className="h-6 w-6" />
               </motion.div>
               <div>
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900">
+                <h1 className="text-xl font-bold text-gray-900">
                   AI EnhanceHub
                 </h1>
               </div>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center space-x-4">
               <Button 
                 onClick={scrollToUpload}
                 size="sm" 
-                className="bg-gray-100 hover:bg-gray-200 text-black text-sm px-3 py-2 sm:px-4 sm:py-2"
+                className="bg-black hover:bg-gray-800 text-white"
               >
                 Get Started
               </Button>
@@ -444,402 +276,405 @@ export default function Home() {
         </div>
       </motion.header>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 relative z-20">
         {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50"></div>
+        
+        <div className="relative z-10 text-center w-full px-6">
         <motion.div 
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-center mb-8 sm:mb-12 lg:mb-16"
-        >
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight px-2">
-            Professional AI Photo <span className="font-instrument-serif font-bold italic">Restoration</span> & Enhancement
+            className="max-w-4xl mx-auto"
+          >
+            <div className="w-32 h-32 mx-auto mb-8 flex items-center justify-center">
+              <div className="w-16 h-16 bg-black rounded-lg flex items-center justify-center">
+                <FaviconIcon className="h-8 w-8" />
+              </div>
+            </div>
+            
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
+              AI-Powered Photo
+              <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Transformation
+              </span>
           </h1>
-          <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed mb-6 sm:mb-8 px-4">
-            Transform old, damaged photos with AI-powered restoration. Remove scratches, fix tears, colorize black & white photos, and enhance image quality instantly. Professional photo restoration made simple.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 lg:space-x-8 text-xs sm:text-sm text-gray-500 px-4">
+            
+            <p className="text-xl sm:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
+              Transform old, damaged, and scratched photos into stunning, high-quality images using advanced AI technology
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+              <Button 
+                onClick={scrollToUpload}
+                size="lg" 
+                className="bg-black text-white hover:bg-gray-800 px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+              >
+                <Sparkles className="mr-2 h-5 w-5" />
+                Start Restoring Now
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              
+              <Button 
+                onClick={scrollToColorize}
+                size="lg" 
+                variant="outline"
+                className="border-2 border-gray-300 hover:border-gray-400 px-8 py-4 text-lg font-semibold rounded-xl bg-white/80 backdrop-blur-sm"
+              >
+                <Palette className="mr-2 h-5 w-5" />
+                Colorize Photos
+              </Button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-8 text-sm text-gray-500">
             <div className="flex items-center space-x-2">
-              <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
+                <CheckCircle className="h-4 w-4 text-green-500" />
               <span>No registration required</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Zap className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
-              <span>Instant restoration</span>
+                <Zap className="h-4 w-4 text-yellow-500" />
+                <span>Instant processing</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
+                <Shield className="h-4 w-4 text-blue-500" />
               <span>Privacy focused</span>
             </div>
           </div>
         </motion.div>
+        </div>
+      </section>
 
-        {/* Main Container */}
+      {/* Main Content */}
+      <main className="w-full px-6 py-16">
+        {/* Photo Restoration Section */}
+        <section ref={uploadSectionRef} className="max-w-6xl mx-auto mb-20">
         <motion.div 
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="bg-gray-50 rounded-2xl sm:rounded-3xl p-4 sm:p-8 lg:p-12"
-        >
-          {/* Upload Area */}
-          <section ref={uploadSectionRef} className="mb-8 sm:mb-12" aria-labelledby="upload-heading">
-            <h2 id="upload-heading" className="text-xl sm:text-2xl font-semibold text-gray-900 text-center mb-6 sm:mb-8 px-2">
-              Upload Your Old Photo for AI Restoration
+            className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100"
+          >
+            <div className="text-center mb-8">
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+                Photo Restoration with AI
             </h2>
-            <FileUploader
-              onFileSelect={handleFileSelect}
-              selectedFile={selectedFile}
-              onRemoveFile={handleRemoveFile}
-              className="max-w-2xl mx-auto"
-            />
-          </section>
-
-          {/* Process Button */}
-          <div className="text-center mb-6 sm:mb-8">
-            <Button
-              onClick={handleRestore}
-              disabled={!selectedFile || isProcessing}
-              size="lg"
-              className="bg-black hover:bg-gray-800 text-white px-6 sm:px-8 lg:px-12 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-            >
-              {mounted && isProcessing ? (
-                <div className="flex items-center space-x-3">
-                  <Wand2 className="h-5 w-5 animate-spin" />
-                  <span>Restoring your photo...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-3">
-                  <Wand2 className="h-5 w-5" />
-                  <span>Restore Photo with AI</span>
-                  <ArrowRight className="h-5 w-5" />
-                </div>
-              )}
-            </Button>
-          </div>
-
-
-
-          {/* Progress Bar */}
-          {mounted && isProcessing && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="max-w-md mx-auto space-y-3 px-4"
-            >
-              <Progress value={progress} className="h-2 sm:h-3 rounded-full bg-gray-200" />
-              <p className="text-xs sm:text-sm text-gray-600 text-center">
-                Restoring your photo... {progress}%
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Upload your old, damaged, or scratched photos and watch our AI transform them into stunning, high-quality images
               </p>
-            </motion.div>
-          )}
-        </motion.div>
+            </div>
 
-        {/* Results Section */}
-        <AnimatePresence>
-          {mounted && restoredImage && (
-            <motion.div 
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -50 }}
-              transition={{ duration: 0.6 }}
-              className="mt-8 sm:mt-12 lg:mt-16"
-            >
-              <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-8 sm:mb-12 px-2">
-                Your Restored Photo
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              {/* Left Side - Upload */}
+              <div className="space-y-6">
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <Wand2 className="h-5 w-5 mr-2 text-blue-600" />
+                    Upload Your Photo
               </h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-                {/* Original Photo */}
-                <motion.div 
-                  initial={{ opacity: 0, x: -50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="bg-gray-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8"
-                >
-                  <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6 flex items-center">
-                    <Scissors className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                    Original Photo
-                  </h4>
-                  <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-2xl">
-                    {selectedFile && (
-                      <Image
-                        src={URL.createObjectURL(selectedFile)}
-                        alt="Original photo"
-                        width={800}
-                        height={600}
-                        className="w-full h-auto rounded-lg sm:rounded-xl"
-                      />
-                    )}
-                  </div>
-                </motion.div>
-
-                {/* Restored Photo */}
-                <motion.div 
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.4 }}
-                  className="bg-gray-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8"
-                >
-                  <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6 flex items-center">
-                    <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                    Restored Photo
-                  </h4>
-                  <div className="relative">
-                                      <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-2xl">
-                    {restoredImage && (
-                      <Image
-                        src={restoredImage}
-                        alt="Restored photo"
-                        width={800}
-                        height={600}
-                        className="w-full h-auto rounded-lg sm:rounded-xl"
-                      />
-                    )}
-                  </div>
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.4, delay: 0.6 }}
-                    >
+                  
+                  <FileUploader
+                    onFileSelect={handleRestoreFileSelect}
+                    selectedFile={restoreFile}
+                    onRemoveFile={handleRemoveRestoreFile}
+                    className="w-full"
+                  />
+                  
+                  {restoreFile && (
+                    <div className="mt-6">
                       <Button
-                        onClick={handleDownload}
-                        disabled={isDownloading}
-                        className="absolute top-3 right-3 sm:top-6 sm:right-6 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-900 shadow-lg border border-gray-200 disabled:opacity-50 text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2"
+                        onClick={handleRestore}
+                        disabled={isProcessing}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 font-semibold rounded-xl shadow-lg"
                       >
-                        {mounted && isDownloading ? (
+                        {isProcessing ? (
                           <>
-                            <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-gray-900 mr-1 sm:mr-2"></div>
-                            <span className="hidden sm:inline">Downloading...</span>
+                            <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                            Restoring...
                           </>
                         ) : (
                           <>
-                            <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                            <span className="hidden sm:inline">Download</span>
+                            <Wand2 className="h-5 w-5 mr-2" />
+                            Restore Photo with AI
                           </>
                         )}
                       </Button>
-                    </motion.div>
+                      
+                      {isProcessing && (
+                        <div className="mt-4">
+                          <div className="flex justify-between text-sm text-gray-600 mb-2">
+                            <span>Processing...</span>
+                            <span>{Math.round(progress)}%</span>
+                          </div>
+                          <Progress value={progress} className="w-full" />
+                        </div>
+                      )}
+                    </div>
+                  )}
                   </div>
-                </motion.div>
               </div>
+
+              {/* Right Side - Results */}
+              <div className="space-y-6">
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <Download className="h-5 w-5 mr-2 text-green-600" />
+                    Restored Results
+                  </h3>
+                  
+                  <AnimatePresence mode="wait">
+                    {restoredImage ? (
+                      <motion.div
+                        key="restored-result"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.3 }}
+                        className="space-y-4"
+                      >
+                        <div className="relative">
+                          <Image
+                            src={restoredImage}
+                            alt="Restored photo"
+                            width={600}
+                            height={400}
+                            className="w-full h-auto rounded-xl shadow-lg"
+                          />
+                        </div>
+                        
+                        <Button
+                          onClick={handleDownload}
+                          disabled={isDownloading}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white py-3 font-semibold rounded-xl"
+                        >
+                          {isDownloading ? (
+                            <>
+                              <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                              Downloading...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-5 w-5 mr-2" />
+                              Download Restored Image
+                            </>
+                          )}
+                        </Button>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="restored-placeholder"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-center py-12"
+                      >
+                        <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Wand2 className="h-12 w-12 text-gray-400" />
+                        </div>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-2">Upload a Photo</h4>
+                        <p className="text-gray-600">Your restored result will appear here</p>
             </motion.div>
           )}
         </AnimatePresence>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </section>
 
-        {/* Colorization Section */}
+        {/* Photo Colorization Section */}
+        <section ref={colorizeSectionRef} className="max-w-6xl mx-auto mb-20">
         <motion.div 
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.5 }}
-          className="mt-8 sm:mt-12 lg:mt-16 bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl sm:rounded-3xl p-4 sm:p-8 lg:p-12 border border-purple-100"
-        >
-          {/* Colorization Upload Area */}
-          <section ref={colorizeSectionRef} className="mb-8 sm:mb-12" aria-labelledby="colorize-heading">
-            <h2 id="colorize-heading" className="text-xl sm:text-2xl font-semibold text-gray-900 text-center mb-6 sm:mb-8 px-2">
-              Add Colors to Old Images Using AI
+            className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-3xl p-8 shadow-xl border border-purple-100"
+          >
+            <div className="text-center mb-8">
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+                Photo Colorization with AI
             </h2>
-            <p className="text-sm sm:text-base text-gray-600 text-center mb-6 sm:mb-8 px-4 max-w-2xl mx-auto">
-              Transform black and white photos into vibrant, realistic color images using advanced AI colorization technology.
-            </p>
-            <FileUploader
-              onFileSelect={handleFileSelect}
-              selectedFile={selectedFile}
-              onRemoveFile={handleRemoveFile}
-              className="max-w-2xl mx-auto"
-            />
-          </section>
-
-          {/* Colorize Button */}
-          <div className="text-center mb-6 sm:mb-8">
-            <Button
-              onClick={handleColorize}
-              disabled={!selectedFile || isColorizing}
-              size="lg"
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 sm:px-8 lg:px-12 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-            >
-              {mounted && isColorizing ? (
-                <div className="flex items-center space-x-3">
-                  <Palette className="h-5 w-5 animate-spin" />
-                  <span>Colorizing your photo...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-3">
-                  <Palette className="h-5 w-5" />
-                  <span>Add Colors to Old Photo with AI</span>
-                  <ArrowRight className="h-5 w-5" />
-                </div>
-              )}
-            </Button>
-          </div>
-
-          {/* Colorize Progress Bar */}
-          {mounted && isColorizing && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="max-w-md mx-auto space-y-3 px-4"
-            >
-              <Progress value={colorizeProgress} className="h-2 sm:h-3 rounded-full bg-gray-200" />
-              <p className="text-xs sm:text-sm text-gray-600 text-center">
-                Colorizing your photo... {colorizeProgress}%
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Transform black and white photos into vibrant, realistic color images using advanced AI colorization technology
               </p>
-            </motion.div>
-          )}
-        </motion.div>
+            </div>
 
-        {/* Colorized Results Section */}
-        <AnimatePresence>
-          {mounted && colorizedImage && (
-            <motion.div 
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -50 }}
-              transition={{ duration: 0.6 }}
-              className="mt-8 sm:mt-12 lg:mt-16"
-            >
-              <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-8 sm:mb-12 px-2">
-                Your Colorized Photo
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              {/* Left Side - Upload and Processing */}
+              <div className="space-y-6">
+                <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <Palette className="h-5 w-5 mr-2 text-purple-600" />
+                    Upload Your Black & White Photo
               </h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-                {/* Original Photo */}
-                <motion.div 
-                  initial={{ opacity: 0, x: -50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="bg-gray-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8"
-                >
-                  <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6 flex items-center">
-                    <Scissors className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                    Original Black & White Photo
-                  </h4>
-                  <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-2xl">
-                    {selectedFile && (
-                      <Image
-                        src={URL.createObjectURL(selectedFile)}
-                        alt="Original black and white photo"
-                        width={800}
-                        height={600}
-                        className="w-full h-auto rounded-lg sm:rounded-xl"
-                      />
-                    )}
-                  </div>
-                </motion.div>
-
-                {/* Colorized Photo */}
-                <motion.div 
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.4 }}
-                  className="bg-gray-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8"
-                >
-                  <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6 flex items-center">
-                    <Palette className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                    Colorized Photo
-                  </h4>
-                  <div className="relative">
-                                      <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-2xl">
-                    {colorizedImage && (
-                      <Image
-                        src={colorizedImage}
-                        alt="Colorized photo"
-                        width={800}
-                        height={600}
-                        className="w-full h-auto rounded-lg sm:rounded-xl"
-                      />
-                    )}
-                  </div>
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.4, delay: 0.6 }}
-                    >
+                  
+                  <FileUploader
+                    onFileSelect={handleColorizeFileSelect}
+                    selectedFile={colorizeFile}
+                    onRemoveFile={handleRemoveColorizeFile}
+                    className="w-full"
+                  />
+                  
+                  {colorizeFile && (
+                    <div className="mt-6">
                       <Button
-                        onClick={handleDownloadColorized}
-                        disabled={isDownloading}
-                        className="absolute top-3 right-3 sm:top-6 sm:right-6 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-900 shadow-lg border border-gray-200 disabled:opacity-50 text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2"
+                        onClick={handleColorize}
+                        disabled={isColorizing}
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 font-semibold rounded-xl shadow-lg"
                       >
-                        {mounted && isDownloading ? (
+                        {isColorizing ? (
                           <>
-                            <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-gray-900 mr-1 sm:mr-2"></div>
-                            <span className="hidden sm:inline">Downloading...</span>
+                            <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                            Colorizing...
                           </>
                         ) : (
                           <>
-                            <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                            <span className="hidden sm:inline">Download</span>
+                            <Palette className="h-5 w-5 mr-2" />
+                            Colorize Photo with AI
                           </>
                         )}
                       </Button>
-                    </motion.div>
+                      
+                      {isColorizing && (
+                        <div className="mt-4">
+                          <div className="flex justify-between text-sm text-gray-600 mb-2">
+                            <span>Processing...</span>
+                            <span>{Math.round(colorizeProgress)}%</span>
+                          </div>
+                          <Progress value={colorizeProgress} className="w-full" />
+                        </div>
+                      )}
+                    </div>
+                  )}
                   </div>
-                </motion.div>
               </div>
+
+              {/* Right Side - Results */}
+              <div className="space-y-6">
+                <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <Download className="h-5 w-5 mr-2 text-green-600" />
+                    Colorized Results
+                  </h3>
+                  
+                  <AnimatePresence mode="wait">
+                    {colorizedImage ? (
+                      <motion.div
+                        key="colorized-result"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.3 }}
+                        className="space-y-4"
+                      >
+                        <div className="relative">
+                          <Image
+                            src={colorizedImage}
+                            alt="Colorized photo"
+                            width={600}
+                            height={400}
+                            className="w-full h-auto rounded-xl shadow-lg"
+                          />
+                        </div>
+                        
+                        <Button
+                          onClick={handleDownloadColorized}
+                          disabled={isDownloading}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white py-3 font-semibold rounded-xl"
+                        >
+                          {isDownloading ? (
+                            <>
+                              <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                              Downloading...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-5 w-5 mr-2" />
+                              Download Colorized Image
+                            </>
+                          )}
+                        </Button>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="colorized-placeholder"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-center py-12"
+                      >
+                        <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Palette className="h-12 w-12 text-gray-400" />
+                        </div>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-2">Upload a Photo</h4>
+                        <p className="text-gray-600">Your colorized result will appear here</p>
             </motion.div>
           )}
         </AnimatePresence>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </section>
 
         {/* Features Section */}
-        <section 
-          aria-labelledby="features-heading"
-          className="mt-8 sm:mt-12 lg:mt-16"
-        >
+        <section className="max-w-6xl mx-auto mb-20">
           <motion.div 
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
-            <h2 id="features-heading" className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-8 sm:mb-12 px-2">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-12">
               Advanced AI Photo Enhancement Features
             </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             <motion.div 
               whileHover={{ y: -10 }}
               transition={{ duration: 0.3 }}
-              className="text-center space-y-3 sm:space-y-4"
+                className="text-center space-y-4 bg-white rounded-2xl p-8 shadow-xl border border-gray-100"
             >
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto">
-                <Scissors className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
+                <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto">
+                  <Scissors className="h-8 w-8 text-blue-600" />
               </div>
-              <h4 className="text-lg sm:text-xl font-semibold text-gray-900">Remove Scratches</h4>
-              <p className="text-sm sm:text-base text-gray-600">AI-powered scratch removal that preserves the original photo details while eliminating surface damage.</p>
+                <h4 className="text-xl font-semibold text-gray-900">Remove Scratches</h4>
+                <p className="text-gray-600">AI-powered scratch removal that preserves the original photo details while eliminating surface damage.</p>
             </motion.div>
+              
             <motion.div 
               whileHover={{ y: -10 }}
               transition={{ duration: 0.3 }}
-              className="text-center space-y-3 sm:space-y-4"
+                className="text-center space-y-4 bg-white rounded-2xl p-8 shadow-xl border border-gray-100"
             >
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto">
-                <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
+                <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto">
+                  <RefreshCw className="h-8 w-8 text-green-600" />
               </div>
-              <h4 className="text-lg sm:text-xl font-semibold text-gray-900">Fix Damage</h4>
-              <p className="text-sm sm:text-base text-gray-600">Repair tears, holes, and other physical damage to restore the photo's original appearance.</p>
+                <h4 className="text-xl font-semibold text-gray-900">Fix Damage</h4>
+                <p className="text-gray-600">Repair tears, holes, and other physical damage to restore the photo's original appearance.</p>
             </motion.div>
+              
             <motion.div 
               whileHover={{ y: -10 }}
               transition={{ duration: 0.3 }}
-              className="text-center space-y-3 sm:space-y-4"
+                className="text-center space-y-4 bg-white rounded-2xl p-8 shadow-xl border border-gray-100"
             >
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto">
-                <Palette className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
+                <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto">
+                  <Palette className="h-8 w-8 text-purple-600" />
               </div>
-              <h4 className="text-lg sm:text-xl font-semibold text-gray-900">Colorize Photos</h4>
-              <p className="text-sm sm:text-base text-gray-600">Bring black and white photos to life with realistic colorization using advanced AI technology.</p>
+                <h4 className="text-xl font-semibold text-gray-900">Colorize Photos</h4>
+                <p className="text-gray-600">Bring black and white photos to life with realistic colorization using advanced AI technology.</p>
             </motion.div>
           </div>
         </motion.div>
         </section>
-
-
 
         {/* CTA Section */}
         <motion.div 
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.8 }}
-          className="mt-8 sm:mt-12 lg:mt-16 text-center bg-black rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-12 text-white"
+          className="max-w-4xl mx-auto text-center bg-black rounded-3xl p-12 text-white"
         >
-          <h3 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 px-2">Ready to Transform Your Photos?</h3>
-          <p className="text-base sm:text-lg lg:text-xl mb-6 sm:mb-8 opacity-90 px-4">Join thousands of users restoring and colorizing their old photos</p>
+          <h3 className="text-3xl sm:text-4xl font-bold mb-4">Ready to Transform Your Photos?</h3>
+          <p className="text-xl mb-8 opacity-90">Join thousands of users restoring and colorizing their old photos</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <motion.div
               whileHover={{ scale: 1.05 }}
@@ -849,7 +684,7 @@ export default function Home() {
                 onClick={scrollToUpload}
                 size="lg" 
                 variant="secondary" 
-                className="bg-white text-black hover:bg-gray-100 px-6 sm:px-8 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base w-full sm:w-auto"
+                className="bg-white text-black hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold text-lg"
               >
                 Start Restoring Now
               </Button>
@@ -862,7 +697,7 @@ export default function Home() {
                 onClick={scrollToColorize}
                 size="lg" 
                 variant="secondary" 
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base w-full sm:w-auto"
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg"
               >
                 Start Colorizing Now
               </Button>
@@ -871,60 +706,40 @@ export default function Home() {
         </motion.div>
       </main>
 
-
-
       {/* Footer */}
-      <footer className="mt-8 sm:mt-12 lg:mt-16 bg-gray-50 border-t border-gray-200 relative z-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <footer className="bg-gray-900 text-white py-12 mt-20">
+        <div className="w-full px-6">
           <div className="text-center">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-black rounded-lg flex items-center justify-center">
-                <FaviconIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-              <h4 className="text-base sm:text-lg font-bold text-gray-900">
-                AI EnhanceHub
-              </h4>
+            <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center mx-auto mb-6">
+              <FaviconIcon className="h-8 w-8" />
             </div>
-            <p className="text-gray-600 text-xs sm:text-sm max-w-md mx-auto px-4">
-              Restore your precious memories with advanced AI photo restoration technology. Transform old, damaged photos into stunning restored images.
+            <h3 className="text-2xl font-bold mb-4">AI EnhanceHub</h3>
+            <p className="text-gray-400 mb-6 max-w-2xl mx-auto">
+              Transform your old, damaged, and scratched photos into stunning, high-quality images using advanced AI technology.
             </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Button 
+                onClick={scrollToUpload}
+                size="lg" 
+                className="bg-white text-gray-900 hover:bg-gray-100 px-8 py-3 font-semibold rounded-xl"
+              >
+                Start Restoring Now
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              
+              <Button 
+                onClick={scrollToColorize}
+                size="lg" 
+                variant="outline"
+                className="border-2 border-gray-600 hover:border-gray-500 px-8 py-3 font-semibold rounded-xl"
+              >
+                <Palette className="mr-2 h-5 w-5" />
+                Colorize Photos
+              </Button>
           </div>
-          <div className="border-t border-gray-200 mt-6 sm:mt-8 pt-6 sm:pt-8 text-center text-gray-600">
-            <p className="text-xs sm:text-sm">&copy; 2025 AI EnhanceHub.</p>
           </div>
         </div>
       </footer>
-
-      {/* Grid Overlay CSS */}
-      <style jsx global>{`
-        .grid-overlay {
-          background-image: 
-            linear-gradient(rgba(0,0,0,0.12) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,0,0,0.12) 1px, transparent 1px);
-          background-size: 30px 30px;
-          width: 100%;
-          height: 100%;
-          position: absolute;
-          top: 0;
-          left: 0;
-          pointer-events: none;
-          z-index: 1;
-        }
-        
-        .grid-overlay::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-image: 
-            linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px);
-          background-size: 10px 10px;
-          pointer-events: none;
-        }
-      `}</style>
     </div>
   )
 }
