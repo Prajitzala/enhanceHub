@@ -45,8 +45,6 @@ interface TextSet {
   letterSpacing: number
   textAlign: 'left' | 'center' | 'right'
   fontStyle: 'normal' | 'italic'
-  shadowColor: string
-  shadowSize: number
 }
 
 const FONT_FAMILIES = [
@@ -111,7 +109,7 @@ export function TextBehindImage() {
     setNextId(prev => prev + 1)
     return {
       id: newId,
-      text: 'Edit Text',
+      text: 'Edit',
       fontFamily: 'Inter',
       top: 0,
       left: 0,
@@ -124,9 +122,7 @@ export function TextBehindImage() {
       tiltY: 0,
       letterSpacing: 0,
       textAlign: 'center',
-      fontStyle: 'normal',
-      shadowColor: 'rgba(0, 0, 0, 0.8)',
-      shadowSize: 4
+      fontStyle: 'normal'
     }
   }
 
@@ -206,6 +202,30 @@ export function TextBehindImage() {
   }
 
   // Export composite image
+  // Function to ensure font is loaded
+  const ensureFontLoaded = (fontFamily: string): Promise<void> => {
+    return new Promise((resolve) => {
+      if (document.fonts && document.fonts.load) {
+        document.fonts.load(`16px ${fontFamily}`).then(() => {
+          console.log(`Font ${fontFamily} loaded`)
+          resolve()
+        }).catch(() => {
+          console.log(`Font ${fontFamily} failed to load, using fallback`)
+          resolve()
+        })
+      } else {
+        resolve()
+      }
+    })
+  }
+
+  // Function to calculate optimal font scale for Canvas
+  const calculateFontScale = (canvas: HTMLCanvasElement): number => {
+    // Increased scale factor to better match CSS preview rendering
+    // Canvas often renders fonts much smaller than CSS, so we need aggressive scaling
+    return 8.8 // Optimized scale factor for better font size matching
+  }
+
   const exportImage = async () => {
     console.log('Starting export...')
     if (!canvasRef.current || !selectedFile || !removedBgImageUrl) {
@@ -225,9 +245,12 @@ export function TextBehindImage() {
     try {
       // Set canvas size
       const img = new window.Image()
-      img.onload = () => {
+      img.onload = async () => {
         canvas.width = img.width
         canvas.height = img.height
+        
+        // Calculate optimal font scale for this canvas
+        const fontScale = calculateFontScale(canvas)
 
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -236,14 +259,32 @@ export function TextBehindImage() {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
         // Draw text layers with advanced positioning
-        textSets.forEach(textSet => {
+        for (const textSet of textSets) {
+          console.log('Exporting text set:', textSet.text, 'at position:', textSet.left, textSet.top)
+          console.log('Export font properties:', {
+            fontStyle: textSet.fontStyle,
+            fontWeight: textSet.fontWeight,
+            fontSize: textSet.fontSize,
+            fontSizePx: textSet.fontSize,
+            fontFamily: textSet.fontFamily,
+            color: textSet.color,
+            opacity: textSet.opacity
+          })
+          
+          // Ensure font is loaded before drawing
+          await ensureFontLoaded(textSet.fontFamily)
+          
           ctx.save()
           
-          // Set text properties
-          ctx.font = `${textSet.fontStyle} ${textSet.fontWeight} ${textSet.fontSize}px ${textSet.fontFamily}`
+          // Set text properties - match preview exactly
+          // Canvas often renders fonts differently than CSS, so we need to scale
+          const scaledFontSize = Math.round(textSet.fontSize * fontScale)
+          const exportFont = `${textSet.fontStyle} ${textSet.fontWeight} ${scaledFontSize}px ${textSet.fontFamily}`
+          console.log('Export font string:', exportFont, 'Original size:', textSet.fontSize, 'Scaled size:', scaledFontSize, 'Scale factor:', fontScale)
+          ctx.font = exportFont // Scale font size to match CSS rendering
           ctx.fillStyle = textSet.color
           ctx.globalAlpha = textSet.opacity
-          ctx.textAlign = textSet.textAlign
+          ctx.textAlign = 'center' // Always center like the preview
           ctx.textBaseline = 'middle'
           
           // Calculate position
@@ -263,23 +304,19 @@ export function TextBehindImage() {
             0, 0
           )
           
-          // Draw text with shadow
-          if (textSet.shadowSize > 0) {
-            ctx.shadowColor = textSet.shadowColor
-            ctx.shadowBlur = textSet.shadowSize
-            ctx.shadowOffsetX = 2
-            ctx.shadowOffsetY = 2
-          }
+          // Text shadows removed as requested
+          // No shadow rendering in export
           
-          // Draw text with letter spacing
+          // Draw text with letter spacing - match preview exactly with scaling
           if (textSet.letterSpacing === 0) {
             ctx.fillText(textSet.text, 0, 0)
           } else {
             const chars = textSet.text.split('')
             let currentX = 0
+            const scaledLetterSpacing = Math.round(textSet.letterSpacing * fontScale)
             const totalWidth = chars.reduce((width, char, i) => {
               const charWidth = ctx.measureText(char).width
-              return width + charWidth + (i < chars.length - 1 ? textSet.letterSpacing : 0)
+              return width + charWidth + (i < chars.length - 1 ? scaledLetterSpacing : 0)
             }, 0)
             
             currentX = -totalWidth / 2
@@ -287,12 +324,12 @@ export function TextBehindImage() {
             chars.forEach((char, i) => {
               const charWidth = ctx.measureText(char).width
               ctx.fillText(char, currentX + charWidth / 2, 0)
-              currentX += charWidth + textSet.letterSpacing
+              currentX += charWidth + scaledLetterSpacing
             })
           }
           
           ctx.restore()
-        })
+        }
 
         // Draw background-removed image on top
         const removedImg = new window.Image()
@@ -342,505 +379,531 @@ export function TextBehindImage() {
         </div>
 
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-            {/* Left Panel - Upload */}
-            <div className="xl:col-span-1">
-              <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 sticky top-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <Layers className="h-5 w-5 mr-2 text-blue-600" />
-                  Upload Image
-                </h3>
-                
-                {!selectedFile ? (
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-gray-400 transition-colors">
-                    <input
-                      type="file"
-                      onChange={handleFileUpload}
-                      accept="image/*"
-                      className="hidden"
-                      id="file-upload"
+          <div className="grid grid-cols-1 gap-8">
+            {/* First Row - Upload Section */}
+            <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <Layers className="h-5 w-5 mr-2 text-blue-600" />
+                Upload Image
+              </h3>
+              
+              {!selectedFile ? (
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-gray-400 transition-colors">
+                  <input
+                    type="file"
+                    onChange={handleFileUpload}
+                    accept="image/*"
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <label htmlFor="file-upload" className="cursor-pointer">
+                    <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 font-medium">Click to upload image</p>
+                    <p className="text-gray-400 text-sm mt-1">PNG, JPG, JPEG up to 10MB</p>
+                  </label>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="relative">
+                    <Image
+                      src={URL.createObjectURL(selectedFile)}
+                      alt="Preview"
+                      width={400}
+                      height={256}
+                      className="w-full h-32 object-cover rounded-lg"
                     />
-                    <label htmlFor="file-upload" className="cursor-pointer">
-                      <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600 font-medium">Click to upload image</p>
-                      <p className="text-gray-400 text-sm mt-1">PNG, JPG, JPEG up to 10MB</p>
-                    </label>
+                    <Button
+                      onClick={() => {
+                        setSelectedFile(null)
+                        setRemovedBgImageUrl(null)
+                        setTextSets([])
+                      }}
+                      size="sm"
+                      variant="outline"
+                      className="absolute top-2 right-2 bg-white hover:bg-gray-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <Image
-                        src={URL.createObjectURL(selectedFile)}
-                        alt="Preview"
-                        width={400}
-                        height={256}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <Button
-                        onClick={() => {
-                          setSelectedFile(null)
-                          setRemovedBgImageUrl(null)
-                          setTextSets([])
-                        }}
-                        size="sm"
-                        variant="outline"
-                        className="absolute top-2 right-2 bg-white hover:bg-gray-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
 
-                    {/* Processing Status */}
-                    {isProcessing && (
-                      <div className="bg-blue-50 rounded-lg p-4">
-                        <div className="flex items-center">
-                          <RotateCw className="h-5 w-5 text-blue-600 mr-2 animate-spin" />
-                          <span className="text-sm text-blue-600">Removing background...</span>
-                        </div>
+                  {/* Processing Status */}
+                  {isProcessing && (
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <RotateCw className="h-5 w-5 text-blue-600 mr-2 animate-spin" />
+                        <span className="text-sm text-blue-600">Removing background...</span>
                       </div>
-                    )}
-
-                    {/* Text Controls */}
-                    {selectedFile && !isProcessing && (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                            <Type className="h-4 w-4 mr-2 text-green-600" />
-                            Text Elements ({textSets.length})
-                          </h4>
-                          <Button
-                            onClick={addTextSet}
-                            size="sm"
-                            className="bg-black text-white hover:bg-gray-800 rounded-lg"
-                          >
-                            <Plus className="h-4 w-4 mr-1" />
-                            Add Text
-                          </Button>
-                        </div>
-
-                        {/* Text Sets List */}
-                        <div className="space-y-2">
-                          {textSets.map((textSet) => (
-                            <div
-                              key={textSet.id}
-                              className={`p-3 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                                activeTextSet?.id === textSet.id
-                                  ? 'border-blue-500 bg-blue-50 shadow-md'
-                                  : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
-                              }`}
-                              onClick={() => setActiveTextSet(textSet)}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium truncate text-sm">
-                                  {textSet.text || 'Empty Text'}
-                                </span>
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      duplicateTextSet(textSet)
-                                    }}
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                                  >
-                                    <Copy className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      removeTextSet(textSet.id)
-                                    }}
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Export Button */}
-                        {textSets.length > 0 && (
-                          <Button
-                            onClick={exportImage}
-                            disabled={isExporting}
-                            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl py-3 font-semibold"
-                          >
-                            {isExporting ? (
-                              <>
-                                <RotateCw className="h-4 w-4 mr-2 animate-spin" />
-                                Exporting...
-                              </>
-                            ) : (
-                              <>
-                                <Download className="h-4 w-4 mr-2" />
-                                Export Image
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Center Panel - Text Properties */}
-            {selectedFile && activeTextSet && (
-              <div className="xl:col-span-1">
-                <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 sticky top-8">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                    <Settings className="h-5 w-5 mr-2 text-purple-600" />
-                    Text Properties
-                  </h3>
-
-                  <div className="space-y-6">
-                    {/* Text Content Section */}
-                    <div className="space-y-4">
-                      <button
-                        onClick={() => toggleSection('text')}
-                        className="flex items-center justify-between w-full text-left font-medium text-gray-900"
-                      >
-                        <span>Text Content</span>
-                        {expandedSections.has('text') ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </button>
-                      
-                      {expandedSections.has('text') && (
-                        <div className="space-y-4 pl-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Text
-                            </label>
-                            <Input
-                              value={activeTextSet.text}
-                              onChange={(e) => updateTextSet(activeTextSet.id, { text: e.target.value })}
-                              placeholder="Enter text..."
-                              className="w-full rounded-lg"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Font Family
-                              </label>
-                              <select
-                                value={activeTextSet.fontFamily}
-                                onChange={(e) => updateTextSet(activeTextSet.id, { fontFamily: e.target.value })}
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                              >
-                                {FONT_FAMILIES.map(font => (
-                                  <option key={font} value={font}>{font}</option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Font Weight
-                              </label>
-                              <select
-                                value={activeTextSet.fontWeight}
-                                onChange={(e) => updateTextSet(activeTextSet.id, { fontWeight: parseInt(e.target.value) })}
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                              >
-                                {FONT_WEIGHTS.map(weight => (
-                                  <option key={weight.value} value={weight.value}>{weight.label}</option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Font Size
-                              </label>
-                              <Input
-                                type="number"
-                                value={activeTextSet.fontSize}
-                                onChange={(e) => updateTextSet(activeTextSet.id, { fontSize: parseInt(e.target.value) || 48 })}
-                                className="w-full rounded-lg"
-                                min="8"
-                                max="200"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Color
-                              </label>
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="color"
-                                  value={activeTextSet.color}
-                                  onChange={(e) => updateTextSet(activeTextSet.id, { color: e.target.value })}
-                                  className="w-8 h-8 rounded border cursor-pointer"
-                                />
-                                <Input
-                                  value={activeTextSet.color}
-                                  onChange={(e) => updateTextSet(activeTextSet.id, { color: e.target.value })}
-                                  className="flex-1 rounded-lg"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-2">
-                            <Button
-                              onClick={() => updateTextSet(activeTextSet.id, { textAlign: 'left' })}
-                              size="sm"
-                              variant={activeTextSet.textAlign === 'left' ? 'default' : 'outline'}
-                              className="h-8"
-                            >
-                              <AlignLeft className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              onClick={() => updateTextSet(activeTextSet.id, { textAlign: 'center' })}
-                              size="sm"
-                              variant={activeTextSet.textAlign === 'center' ? 'default' : 'outline'}
-                              className="h-8"
-                            >
-                              <AlignCenter className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              onClick={() => updateTextSet(activeTextSet.id, { textAlign: 'right' })}
-                              size="sm"
-                              variant={activeTextSet.textAlign === 'right' ? 'default' : 'outline'}
-                              className="h-8"
-                            >
-                              <AlignRight className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
                     </div>
+                  )}
 
-                    {/* Position Section */}
+                  {/* Text Controls */}
+                  {selectedFile && !isProcessing && (
                     <div className="space-y-4">
-                      <button
-                        onClick={() => toggleSection('position')}
-                        className="flex items-center justify-between w-full text-left font-medium text-gray-900"
-                      >
-                        <span>Position & Effects</span>
-                        {expandedSections.has('position') ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </button>
-                      
-                      {expandedSections.has('position') && (
-                        <div className="space-y-4 pl-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                              <Move className="h-4 w-4 mr-1" />
-                              Position
-                            </label>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs text-gray-500 mb-1">X Position</label>
-                                <input
-                                  type="range"
-                                  min="-50"
-                                  max="50"
-                                  value={activeTextSet.left}
-                                  onChange={(e) => updateTextSet(activeTextSet.id, { left: parseInt(e.target.value) })}
-                                  className="w-full"
-                                />
-                                <span className="text-xs text-gray-500">{activeTextSet.left}%</span>
-                              </div>
-                              <div>
-                                <label className="block text-xs text-gray-500 mb-1">Y Position</label>
-                                <input
-                                  type="range"
-                                  min="-50"
-                                  max="50"
-                                  value={activeTextSet.top}
-                                  onChange={(e) => updateTextSet(activeTextSet.id, { top: parseInt(e.target.value) })}
-                                  className="w-full"
-                                />
-                                <span className="text-xs text-gray-500">{activeTextSet.top}%</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                              <Settings className="h-4 w-4 mr-1" />
-                              Effects
-                            </label>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs text-gray-500 mb-1">Rotation</label>
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="360"
-                                  value={activeTextSet.rotation}
-                                  onChange={(e) => updateTextSet(activeTextSet.id, { rotation: parseInt(e.target.value) })}
-                                  className="w-full"
-                                />
-                                <span className="text-xs text-gray-500">{activeTextSet.rotation}°</span>
-                              </div>
-                              <div>
-                                <label className="block text-xs text-gray-500 mb-1">Opacity</label>
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="1"
-                                  step="0.1"
-                                  value={activeTextSet.opacity}
-                                  onChange={(e) => updateTextSet(activeTextSet.id, { opacity: parseFloat(e.target.value) })}
-                                  className="w-full"
-                                />
-                                <span className="text-xs text-gray-500">{activeTextSet.opacity}</span>
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3 mt-3">
-                              <div>
-                                <label className="block text-xs text-gray-500 mb-1">Tilt X (3D)</label>
-                                <input
-                                  type="range"
-                                  min="-45"
-                                  max="45"
-                                  value={activeTextSet.tiltX}
-                                  onChange={(e) => updateTextSet(activeTextSet.id, { tiltX: parseInt(e.target.value) })}
-                                  className="w-full"
-                                />
-                                <span className="text-xs text-gray-500">{activeTextSet.tiltX}°</span>
-                              </div>
-                              <div>
-                                <label className="block text-xs text-gray-500 mb-1">Tilt Y (3D)</label>
-                                <input
-                                  type="range"
-                                  min="-45"
-                                  max="45"
-                                  value={activeTextSet.tiltY}
-                                  onChange={(e) => updateTextSet(activeTextSet.id, { tiltY: parseInt(e.target.value) })}
-                                  className="w-full"
-                                />
-                                <span className="text-xs text-gray-500">{activeTextSet.tiltY}°</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Right Panel - Preview */}
-            <div className="xl:col-span-1">
-              <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 sticky top-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-                    <ImageIcon className="h-5 w-5 mr-2 text-purple-600" />
-                    Live Preview
-                  </h3>
-                  <Button
-                    onClick={() => setShowTextLayer(!showTextLayer)}
-                    size="sm"
-                    variant="outline"
-                    className="flex items-center rounded-lg"
-                  >
-                    {showTextLayer ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
-                    {showTextLayer ? 'Hide Text' : 'Show Text'}
-                  </Button>
-                </div>
-
-                {/* Preview Area */}
-                <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden shadow-inner min-h-[400px] flex items-center justify-center border-2 border-dashed border-gray-300">
-                  {selectedFile ? (
-                    <>
-                      {/* Layer 1: Original Image (Background) */}
-                      <Image
-                        src={URL.createObjectURL(selectedFile)}
-                        alt="Original image"
-                        width={600}
-                        height={400}
-                        className="w-full h-auto object-contain max-h-[400px]"
-                      />
-
-                      {/* Layer 2: Text Overlay */}
-                      {showTextLayer && textSets.map((textSet) => (
-                        <div
-                          key={textSet.id}
-                          style={{
-                            position: 'absolute',
-                            top: `${50 - textSet.top}%`,
-                            left: `${textSet.left + 50}%`,
-                            transform: `
-                              translate(-50%, -50%)
-                              rotate(${textSet.rotation}deg)
-                              perspective(1000px)
-                              rotateX(${textSet.tiltX}deg)
-                              rotateY(${textSet.tiltY}deg)
-                            `,
-                            fontFamily: textSet.fontFamily,
-                            fontSize: `${textSet.fontSize}px`,
-                            fontWeight: textSet.fontWeight,
-                            fontStyle: textSet.fontStyle,
-                            color: textSet.color,
-                            opacity: textSet.opacity,
-                            textAlign: textSet.textAlign,
-                            letterSpacing: `${textSet.letterSpacing}px`,
-                            textShadow: `${textSet.shadowSize}px ${textSet.shadowSize}px ${textSet.shadowSize}px ${textSet.shadowColor}`,
-                            cursor: 'pointer',
-                            zIndex: 10,
-                            transition: 'all 0.2s ease',
-                            transformStyle: 'preserve-3d'
-                          }}
-                          onClick={() => setActiveTextSet(textSet)}
-                          className={`${
-                            activeTextSet?.id === textSet.id 
-                              ? 'ring-4 ring-blue-500 ring-opacity-50' 
-                              : 'hover:scale-105'
-                          }`}
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                          <Type className="h-4 w-4 mr-2 text-green-600" />
+                          Text Elements ({textSets.length})
+                        </h4>
+                        <Button
+                          onClick={addTextSet}
+                          size="sm"
+                          className="bg-black text-white hover:bg-gray-800 rounded-lg"
                         >
-                          {textSet.text}
-                        </div>
-                      ))}
-
-                      {/* Layer 3: Background-Removed Image (Foreground) */}
-                      {removedBgImageUrl && (
-                        <Image
-                          src={removedBgImageUrl}
-                          alt="Background removed"
-                          width={600}
-                          height={400}
-                          className="absolute top-0 left-0 w-full h-auto object-contain max-h-[400px]"
-                          style={{ zIndex: 20 }}
-                        />
-                      )}
-
-                      {/* Processing Overlay */}
-                      {isProcessing && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-30 rounded-xl">
-                          <div className="text-center text-white bg-black/80 rounded-2xl p-8">
-                            <RotateCw className="h-12 w-12 mx-auto mb-4 animate-spin text-blue-400" />
-                            <p className="text-lg font-semibold">Removing background...</p>
-                            <p className="text-sm text-gray-300 mt-2">This may take a few seconds</p>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-center text-gray-500 p-12">
-                      <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Type className="h-12 w-12 text-gray-400" />
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Text
+                        </Button>
                       </div>
-                      <h4 className="text-xl font-semibold mb-2">Upload an Image</h4>
-                      <p className="text-gray-400">Start creating stunning text-behind-image effects</p>
+
+                      {/* Text Sets List */}
+                      <div className="space-y-2">
+                        {textSets.map((textSet) => (
+                          <div
+                            key={textSet.id}
+                            className={`p-3 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                              activeTextSet?.id === textSet.id
+                                ? 'border-blue-500 bg-blue-50 shadow-md'
+                                : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
+                            }`}
+                            onClick={() => setActiveTextSet(textSet)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium truncate text-sm">
+                                {textSet.text || 'Empty Text'}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    duplicateTextSet(textSet)
+                                  }}
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    removeTextSet(textSet.id)
+                                  }}
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Export Button */}
+                      {textSets.length > 0 && (
+                        <Button
+                          onClick={exportImage}
+                          disabled={isExporting}
+                          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl py-3 font-semibold"
+                        >
+                          {isExporting ? (
+                            <>
+                              <RotateCw className="h-4 w-4 mr-2 animate-spin" />
+                              Exporting...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-4 w-4 mr-2" />
+                              Export Image
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
-
-                {/* Hidden Canvas for Export */}
-                <canvas ref={canvasRef} className="hidden" />
-              </div>
+              )}
             </div>
+
+            {/* Second Row - Text Properties and Live Preview */}
+            {selectedFile && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Left Panel - Text Properties (Fixed and Scrollable) */}
+                {activeTextSet && (
+                  <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
+                    <div className="sticky top-8">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                        <Settings className="h-5 w-5 mr-2 text-purple-600" />
+                        Text Properties
+                      </h3>
+
+                      <div className="max-h-[600px] overflow-y-auto space-y-6 pr-2">
+                        {/* Text Content Section */}
+                        <div className="space-y-4">
+                          <button
+                            onClick={() => toggleSection('text')}
+                            className="flex items-center justify-between w-full text-left font-medium text-gray-900"
+                          >
+                            <span>Text Content</span>
+                            {expandedSections.has('text') ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </button>
+                          
+                          {expandedSections.has('text') && (
+                            <div className="space-y-4 pl-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Text
+                                </label>
+                                <Input
+                                  value={activeTextSet.text}
+                                  onChange={(e) => updateTextSet(activeTextSet.id, { text: e.target.value })}
+                                  placeholder="Enter text..."
+                                  className="w-full rounded-lg"
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Font Family
+                                  </label>
+                                  <select
+                                    value={activeTextSet.fontFamily}
+                                    onChange={(e) => updateTextSet(activeTextSet.id, { fontFamily: e.target.value })}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                                  >
+                                    {FONT_FAMILIES.map(font => (
+                                      <option key={font} value={font}>{font}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Font Weight
+                                  </label>
+                                  <select
+                                    value={activeTextSet.fontWeight}
+                                    onChange={(e) => updateTextSet(activeTextSet.id, { fontWeight: parseInt(e.target.value) })}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                                  >
+                                    {FONT_WEIGHTS.map(weight => (
+                                      <option key={weight.value} value={weight.value}>{weight.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3">
+                                                                 <div>
+                                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                                     Font Size: {activeTextSet.fontSize}px
+                                   </label>
+                                   <div className="space-y-2">
+                                     <input
+                                       type="range"
+                                       min="8"
+                                       max="200"
+                                       value={activeTextSet.fontSize}
+                                       onChange={(e) => updateTextSet(activeTextSet.id, { fontSize: parseInt(e.target.value) })}
+                                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                       style={{
+                                         background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((activeTextSet.fontSize - 8) / (200 - 8)) * 100}%, #e5e7eb ${((activeTextSet.fontSize - 8) / (200 - 8)) * 100}%, #e5e7eb 100%)`,
+                                         WebkitAppearance: 'none',
+                                         height: '8px',
+                                         borderRadius: '5px',
+                                         outline: 'none'
+                                       }}
+                                     />
+                                     <div className="flex justify-between text-xs text-gray-500">
+                                       <span>8px</span>
+                                       <span>200px</span>
+                                     </div>
+                                   </div>
+
+                                 </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Color
+                                  </label>
+                                  <div className="flex items-center space-x-2">
+                                    <input
+                                      type="color"
+                                      value={activeTextSet.color}
+                                      onChange={(e) => updateTextSet(activeTextSet.id, { color: e.target.value })}
+                                      className="w-8 h-8 rounded border cursor-pointer"
+                                    />
+                                    <Input
+                                      value={activeTextSet.color}
+                                      onChange={(e) => updateTextSet(activeTextSet.id, { color: e.target.value })}
+                                      className="flex-1 rounded-lg"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2">
+                                <Button
+                                  onClick={() => updateTextSet(activeTextSet.id, { textAlign: 'left' })}
+                                  size="sm"
+                                  variant={activeTextSet.textAlign === 'left' ? 'default' : 'outline'}
+                                  className="h-8"
+                                >
+                                  <AlignLeft className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  onClick={() => updateTextSet(activeTextSet.id, { textAlign: 'center' })}
+                                  size="sm"
+                                  variant={activeTextSet.textAlign === 'center' ? 'default' : 'outline'}
+                                  className="h-8"
+                                >
+                                  <AlignCenter className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  onClick={() => updateTextSet(activeTextSet.id, { textAlign: 'right' })}
+                                  size="sm"
+                                  variant={activeTextSet.textAlign === 'right' ? 'default' : 'outline'}
+                                  className="h-8"
+                                >
+                                  <AlignRight className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Position Section */}
+                        <div className="space-y-4">
+                          <button
+                            onClick={() => toggleSection('position')}
+                            className="flex items-center justify-between w-full text-left font-medium text-gray-900"
+                          >
+                            <span>Position & Effects</span>
+                            {expandedSections.has('position') ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </button>
+                          
+                          {expandedSections.has('position') && (
+                            <div className="space-y-4 pl-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                  <Move className="h-4 w-4 mr-1" />
+                                  Position
+                                </label>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">X Position</label>
+                                    <input
+                                      type="range"
+                                      min="-50"
+                                      max="50"
+                                      value={activeTextSet.left}
+                                      onChange={(e) => updateTextSet(activeTextSet.id, { left: parseInt(e.target.value) })}
+                                      className="w-full"
+                                    />
+                                    <span className="text-xs text-gray-500">{activeTextSet.left}%</span>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Y Position</label>
+                                    <input
+                                      type="range"
+                                      min="-50"
+                                      max="50"
+                                      value={activeTextSet.top}
+                                      onChange={(e) => updateTextSet(activeTextSet.id, { top: parseInt(e.target.value) })}
+                                      className="w-full"
+                                    />
+                                    <span className="text-xs text-gray-500">{activeTextSet.top}%</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                  <Settings className="h-4 w-4 mr-1" />
+                                  Effects
+                                </label>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Rotation</label>
+                                    <input
+                                      type="range"
+                                      min="0"
+                                      max="360"
+                                      value={activeTextSet.rotation}
+                                      onChange={(e) => updateTextSet(activeTextSet.id, { rotation: parseInt(e.target.value) })}
+                                      className="w-full"
+                                    />
+                                    <span className="text-xs text-gray-500">{activeTextSet.rotation}°</span>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Opacity</label>
+                                    <input
+                                      type="range"
+                                      min="0"
+                                      max="1"
+                                      step="0.1"
+                                      value={activeTextSet.opacity}
+                                      onChange={(e) => updateTextSet(activeTextSet.id, { opacity: parseFloat(e.target.value) })}
+                                      className="w-full"
+                                    />
+                                    <span className="text-xs text-gray-500">{activeTextSet.opacity}</span>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 mt-3">
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Tilt X (3D)</label>
+                                    <input
+                                      type="range"
+                                      min="-45"
+                                      max="45"
+                                      value={activeTextSet.tiltX}
+                                      onChange={(e) => updateTextSet(activeTextSet.id, { tiltX: parseInt(e.target.value) })}
+                                      className="w-full"
+                                    />
+                                    <span className="text-xs text-gray-500">{activeTextSet.tiltX}°</span>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Tilt Y (3D)</label>
+                                    <input
+                                      type="range"
+                                      min="-45"
+                                      max="45"
+                                      value={activeTextSet.tiltY}
+                                      onChange={(e) => updateTextSet(activeTextSet.id, { tiltY: parseInt(e.target.value) })}
+                                      className="w-full"
+                                    />
+                                    <span className="text-xs text-gray-500">{activeTextSet.tiltY}°</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Right Panel - Live Preview */}
+                <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                      <ImageIcon className="h-5 w-5 mr-2 text-green-600" />
+                      Live Preview
+                    </h3>
+                    <Button
+                      onClick={() => setShowTextLayer(!showTextLayer)}
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      {showTextLayer ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showTextLayer ? 'Hide Text' : 'Show Text'}
+                    </Button>
+                  </div>
+
+                  {/* Preview Area */}
+                  <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden shadow-inner flex items-center justify-center border-dashed border-gray-300">
+                    {selectedFile ? (
+                      <>
+                        {/* Layer 1: Original Image (Background) */}
+                        <Image
+                          src={URL.createObjectURL(selectedFile)}
+                          alt="Original image"
+                          width={600}
+                          height={400}
+                          className="w-full object-contain max-h-[400px]"
+                        />
+
+                        {/* Layer 2: Text Overlay */}
+                        {showTextLayer && textSets.map((textSet) => {
+                          console.log('Preview text set:', textSet.text, 'at position:', textSet.left, textSet.top)
+                                      console.log('Preview font properties:', {
+              fontStyle: textSet.fontStyle,
+              fontWeight: textSet.fontWeight,
+              fontSize: textSet.fontSize,
+              fontSizePx: textSet.fontSize,
+              fontFamily: textSet.fontFamily,
+              color: textSet.color,
+              opacity: textSet.opacity
+            })
+                          return (
+                          <div
+                            key={textSet.id}
+                            style={{
+                              position: 'absolute',
+                              top: `${50 - textSet.top}%`,
+                              left: `${textSet.left + 50}%`,
+                              transform: `
+                                translate(-50%, -50%)
+                                rotate(${textSet.rotation}deg)
+                                perspective(1000px)
+                                rotateX(${textSet.tiltX}deg)
+                                rotateY(${textSet.tiltY}deg)
+                              `,
+                              fontFamily: textSet.fontFamily,
+                              fontSize: `${textSet.fontSize}px`,
+                              fontWeight: textSet.fontWeight,
+                              fontStyle: textSet.fontStyle,
+                              color: textSet.color,
+                              opacity: textSet.opacity,
+                              textAlign: textSet.textAlign,
+                              letterSpacing: `${textSet.letterSpacing}px`,
+                              // textShadow removed as requested
+                              cursor: 'pointer',
+                              zIndex: 10,
+                              transition: 'all 0.2s ease',
+                              transformStyle: 'preserve-3d'
+                            }}
+                            onClick={() => setActiveTextSet(textSet)}
+                            className={`${
+                              activeTextSet?.id === textSet.id 
+                                ? 'ring-4 ring-blue-500 ring-opacity-50' 
+                                : 'hover:scale-105'
+                            }`}
+                          >
+                            {textSet.text}
+                          </div>
+                        )})}
+
+                        {/* Layer 3: Background-Removed Image (Foreground) */}
+                        {removedBgImageUrl && (
+                          <Image
+                            src={removedBgImageUrl}
+                            alt="Background removed"
+                            width={600}
+                            height={400}
+                            className="absolute top-0 left-0 w-full object-contain max-h-[400px]"
+                            style={{ zIndex: 20 }}
+                          />
+                        )}
+
+                        {/* Processing Overlay */}
+                        {isProcessing && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-30 rounded-xl">
+                            <div className="text-center text-white bg-black/80 rounded-2xl p-8">
+                              <RotateCw className="h-12 w-12 mx-auto mb-4 animate-spin text-blue-400" />
+                              <p className="text-lg font-semibold">Removing background...</p>
+                              <p className="text-sm text-gray-300 mt-2">This may take a few seconds</p>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center text-gray-500 p-12">
+                        <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                          <Type className="h-12 w-12 text-gray-400" />
+                        </div>
+                        <h4 className="text-xl font-semibold mb-2">Upload an Image</h4>
+                        <p className="text-gray-400">Start creating stunning text-behind-image effects</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Hidden Canvas for Export */}
+                  <canvas ref={canvasRef} className="hidden" />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

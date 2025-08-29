@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FileUploader } from '@/components/ui/file-uploader'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,8 @@ import { useToast } from '@/hooks/use-toast'
 import { Download, Wand2, ArrowRight, CheckCircle, Zap, Shield, RefreshCw, Palette, Scissors, Sparkles } from 'lucide-react'
 import { trackPhotoRestoration, trackEngagement } from '@/lib/google-ads'
 import FaviconIcon from '@/components/ui/favicon'
+import { TextBehindImage } from '@/components/ui/text-behind-image'
+
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
@@ -26,11 +29,16 @@ export default function Home() {
   const { toast } = useToast()
   const uploadSectionRef = useRef<HTMLDivElement>(null)
   const colorizeSectionRef = useRef<HTMLDivElement>(null)
+  const textBehindImageRef = useRef<HTMLDivElement>(null)
+
+
 
   // Handle hydration
   useEffect(() => {
     setMounted(true)
   }, [])
+
+
 
   // Don't render anything until mounted to prevent hydration mismatch
   if (!mounted) {
@@ -85,6 +93,15 @@ export default function Home() {
     })
     
     trackEngagement.ctaClick('start_colorizing_now')
+  }
+
+  const scrollToTextBehindImage = () => {
+    textBehindImageRef.current?.scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'start'
+    })
+    
+    trackEngagement.ctaClick('start_text_behind_image')
   }
 
   const handleRestore = async () => {
@@ -198,7 +215,7 @@ export default function Home() {
     setIsDownloading(true)
     try {
       const response = await fetch(restoredImage)
-      const blob = await response.blob()
+        const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -217,10 +234,10 @@ export default function Home() {
   const handleDownloadColorized = async () => {
     if (!colorizedImage) return
 
-      setIsDownloading(true)
-      try {
-        const response = await fetch(colorizedImage)
-        const blob = await response.blob()
+    setIsDownloading(true)
+    try {
+      const response = await fetch(colorizedImage)
+      const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -370,9 +387,9 @@ export default function Home() {
                   <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                     <Wand2 className="h-5 w-5 mr-2 text-blue-600" />
                     Upload Your Photo
-              </h3>
+                  </h3>
                   
-                  <FileUploader
+            <FileUploader
                     onFileSelect={handleRestoreFileSelect}
                     selectedFile={restoreFile}
                     onRemoveFile={handleRemoveRestoreFile}
@@ -381,8 +398,8 @@ export default function Home() {
                   
                   {restoreFile && (
                     <div className="mt-6">
-                      <Button
-                        onClick={handleRestore}
+            <Button
+              onClick={handleRestore}
                         disabled={isProcessing}
                         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 font-semibold rounded-xl shadow-lg"
                       >
@@ -396,8 +413,8 @@ export default function Home() {
                             <Wand2 className="h-5 w-5 mr-2" />
                             Restore Photo with AI
                           </>
-                        )}
-                      </Button>
+              )}
+            </Button>
                       
                       {isProcessing && (
                         <div className="mt-4">
@@ -409,7 +426,7 @@ export default function Home() {
                         </div>
                       )}
                     </div>
-                  )}
+                    )}
                   </div>
               </div>
 
@@ -423,7 +440,7 @@ export default function Home() {
                   
                   <AnimatePresence mode="wait">
                     {restoredImage ? (
-                      <motion.div
+                <motion.div 
                         key="restored-result"
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -431,34 +448,34 @@ export default function Home() {
                         transition={{ duration: 0.3 }}
                         className="space-y-4"
                       >
-                        <div className="relative">
-                          <Image
-                            src={restoredImage}
-                            alt="Restored photo"
+                  <div className="relative">
+                      <Image
+                        src={restoredImage}
+                        alt="Restored photo"
                             width={600}
                             height={400}
                             className="w-full h-auto rounded-xl shadow-lg"
                           />
-                        </div>
+                  </div>
                         
-                        <Button
-                          onClick={handleDownload}
-                          disabled={isDownloading}
+                      <Button
+                        onClick={handleDownload}
+                        disabled={isDownloading}
                           className="w-full bg-green-600 hover:bg-green-700 text-white py-3 font-semibold rounded-xl"
-                        >
+                      >
                           {isDownloading ? (
-                            <>
+                          <>
                               <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
                               Downloading...
-                            </>
-                          ) : (
-                            <>
+                          </>
+                        ) : (
+                          <>
                               <Download className="h-5 w-5 mr-2" />
                               Download Restored Image
-                            </>
-                          )}
-                        </Button>
-                      </motion.div>
+                          </>
+                        )}
+                      </Button>
+                    </motion.div>
                     ) : (
                       <motion.div
                         key="restored-placeholder"
@@ -469,7 +486,7 @@ export default function Home() {
                       >
                         <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                           <Wand2 className="h-12 w-12 text-gray-400" />
-                        </div>
+                  </div>
                         <h4 className="text-lg font-semibold text-gray-900 mb-2">Upload a Photo</h4>
                         <p className="text-gray-600">Your restored result will appear here</p>
             </motion.div>
@@ -505,9 +522,9 @@ export default function Home() {
                   <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                     <Palette className="h-5 w-5 mr-2 text-purple-600" />
                     Upload Your Black & White Photo
-              </h3>
+                  </h3>
                   
-                  <FileUploader
+            <FileUploader
                     onFileSelect={handleColorizeFileSelect}
                     selectedFile={colorizeFile}
                     onRemoveFile={handleRemoveColorizeFile}
@@ -516,8 +533,8 @@ export default function Home() {
                   
                   {colorizeFile && (
                     <div className="mt-6">
-                      <Button
-                        onClick={handleColorize}
+            <Button
+              onClick={handleColorize}
                         disabled={isColorizing}
                         className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 font-semibold rounded-xl shadow-lg"
                       >
@@ -531,8 +548,8 @@ export default function Home() {
                             <Palette className="h-5 w-5 mr-2" />
                             Colorize Photo with AI
                           </>
-                        )}
-                      </Button>
+              )}
+            </Button>
                       
                       {isColorizing && (
                         <div className="mt-4">
@@ -544,7 +561,7 @@ export default function Home() {
                         </div>
                       )}
                     </div>
-                  )}
+                    )}
                   </div>
               </div>
 
@@ -558,7 +575,7 @@ export default function Home() {
                   
                   <AnimatePresence mode="wait">
                     {colorizedImage ? (
-                      <motion.div
+                <motion.div 
                         key="colorized-result"
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -566,34 +583,34 @@ export default function Home() {
                         transition={{ duration: 0.3 }}
                         className="space-y-4"
                       >
-                        <div className="relative">
-                          <Image
-                            src={colorizedImage}
-                            alt="Colorized photo"
+                  <div className="relative">
+                      <Image
+                        src={colorizedImage}
+                        alt="Colorized photo"
                             width={600}
                             height={400}
                             className="w-full h-auto rounded-xl shadow-lg"
                           />
-                        </div>
+                  </div>
                         
-                        <Button
-                          onClick={handleDownloadColorized}
-                          disabled={isDownloading}
+                      <Button
+                        onClick={handleDownloadColorized}
+                        disabled={isDownloading}
                           className="w-full bg-green-600 hover:bg-green-700 text-white py-3 font-semibold rounded-xl"
-                        >
+                      >
                           {isDownloading ? (
-                            <>
+                          <>
                               <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
                               Downloading...
-                            </>
-                          ) : (
-                            <>
+                          </>
+                        ) : (
+                          <>
                               <Download className="h-5 w-5 mr-2" />
                               Download Colorized Image
-                            </>
-                          )}
-                        </Button>
-                      </motion.div>
+                          </>
+                        )}
+                      </Button>
+                    </motion.div>
                     ) : (
                       <motion.div
                         key="colorized-placeholder"
@@ -604,7 +621,7 @@ export default function Home() {
                       >
                         <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                           <Palette className="h-12 w-12 text-gray-400" />
-                        </div>
+                  </div>
                         <h4 className="text-lg font-semibold text-gray-900 mb-2">Upload a Photo</h4>
                         <p className="text-gray-600">Your colorized result will appear here</p>
             </motion.div>
@@ -615,6 +632,11 @@ export default function Home() {
             </div>
           </motion.div>
         </section>
+
+        {/* Text Behind Image Section */}
+        <div ref={textBehindImageRef}>
+          <TextBehindImage />
+        </div>
 
         {/* Features Section */}
         <section className="max-w-6xl mx-auto mb-20">
@@ -702,6 +724,19 @@ export default function Home() {
                 Start Colorizing Now
               </Button>
             </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button 
+                onClick={scrollToTextBehindImage}
+                size="lg" 
+                variant="secondary" 
+                className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white px-8 py-4 rounded-xl font-semibold text-lg"
+              >
+                Try Text Behind Image
+              </Button>
+            </motion.div>
           </div>
         </motion.div>
       </main>
@@ -712,7 +747,7 @@ export default function Home() {
           <div className="text-center">
             <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center mx-auto mb-6">
               <FaviconIcon className="h-8 w-8" />
-            </div>
+              </div>
             <h3 className="text-2xl font-bold mb-4">AI EnhanceHub</h3>
             <p className="text-gray-400 mb-6 max-w-2xl mx-auto">
               Transform your old, damaged, and scratched photos into stunning, high-quality images using advanced AI technology.
@@ -736,7 +771,30 @@ export default function Home() {
                 <Palette className="mr-2 h-5 w-5" />
                 Colorize Photos
               </Button>
-          </div>
+
+              <Button 
+                onClick={scrollToTextBehindImage}
+                size="lg" 
+                variant="outline"
+                className="border-2 border-gray-600 hover:border-gray-500 px-8 py-3 font-semibold rounded-xl"
+              >
+                Text Behind Image
+              </Button>
+            </div>
+            
+            {/* Footer Links */}
+            <div className="mt-8 pt-8 border-t border-gray-800">
+              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center text-sm">
+                <Link 
+                  href="/privacy-policy"
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  Privacy Policy
+                </Link>
+                <span className="text-gray-600">•</span>
+                <span className="text-gray-600">© 2024 AI EnhanceHub. All rights reserved.</span>
+              </div>
+            </div>
           </div>
         </div>
       </footer>
