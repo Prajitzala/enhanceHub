@@ -13,6 +13,7 @@ import { Download, Wand2, ArrowRight, CheckCircle, Zap, Shield, RefreshCw, Palet
 import { trackPhotoRestoration, trackEngagement } from '@/lib/google-ads'
 import FaviconIcon from '@/components/ui/favicon'
 import { TextBehindImage } from '@/components/ui/text-behind-image'
+import { Footer } from '@/components/ui/footer'
 
 
 export default function Home() {
@@ -741,63 +742,7 @@ export default function Home() {
         </motion.div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 mt-20">
-        <div className="w-full px-6">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center mx-auto mb-6">
-              <FaviconIcon className="h-8 w-8" />
-              </div>
-            <h3 className="text-2xl font-bold mb-4">AI EnhanceHub</h3>
-            <p className="text-gray-400 mb-6 max-w-2xl mx-auto">
-              Transform your old, damaged, and scratched photos into stunning, high-quality images using advanced AI technology.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button 
-                onClick={scrollToUpload}
-                size="lg" 
-                className="bg-white text-gray-900 hover:bg-gray-100 px-8 py-3 font-semibold rounded-xl"
-              >
-                Start Restoring Now
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              
-              <Button 
-                onClick={scrollToColorize}
-                size="lg" 
-                variant="outline"
-                className="border-2 border-gray-600 hover:border-gray-500 px-8 py-3 font-semibold rounded-xl"
-              >
-                <Palette className="mr-2 h-5 w-5" />
-                Colorize Photos
-              </Button>
-
-              <Button 
-                onClick={scrollToTextBehindImage}
-                size="lg" 
-                variant="outline"
-                className="border-2 border-gray-600 hover:border-gray-500 px-8 py-3 font-semibold rounded-xl"
-              >
-                Text Behind Image
-              </Button>
-            </div>
-            
-            {/* Footer Links */}
-            <div className="mt-8 pt-8 border-t border-gray-800">
-              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center text-sm">
-                <Link 
-                  href="/privacy-policy"
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  Privacy Policy
-                </Link>
-                <span className="text-gray-600">•</span>
-                <span className="text-gray-600">© 2024 AI EnhanceHub. All rights reserved.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }
